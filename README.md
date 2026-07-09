@@ -22,6 +22,22 @@
 - ทุกๆ ครั้งที่ Login ตัว JWT Token จะฝังค่า Role เอาไว้ให้ 
 - **ตัวอย่างการห้ามบาง Route:** เส้นทาง `DELETE /api/notes/{id}` ถูกจำกัดสิทธิ์ใน `router.go` ให้เข้าถึงได้เฉพาะคนที่ถือ Token ที่มีสิทธิ์ `admin` เท่านั้น (ผ่าน `middleware.RequireRole("admin")`)
 
+## 🐳 Database ผ่าน Docker
+โปรเจกต์นี้มี `docker-compose.yml` ไว้ให้แล้ว แต่ตั้งใจให้รันแค่ **PostgreSQL** เท่านั้น (ตัว Go ยังรันตรงจากเครื่องเหมือนเดิม ยังไม่ได้ dockerize)
+
+```bash
+# สั่งรัน Database ขึ้นมา (ครั้งแรกจะดึง image postgres:16-alpine มาก่อน)
+docker compose up -d
+
+# เช็คสถานะ container
+docker compose ps
+
+# ปิด Database
+docker compose down
+```
+
+ค่าที่ตั้งไว้ใน `docker-compose.yml` (user/password/database/port) ตรงกับค่า default ใน `.env.example` (`DB_DSN`) อยู่แล้ว ใช้คู่กันได้ทันทีโดยไม่ต้องแก้อะไร
+
 ## 🛠 คำสั่ง Go ที่ใช้บ่อยในโปรเจกต์นี้
 รวบรวมคำสั่งพื้นฐานและคำสั่งที่ต้องใช้เป็นประจำ:
 
@@ -44,8 +60,9 @@ go test ./... -v
 ```
 
 ## 🚀 วิธีเริ่มต้น (Quick Start)
-1. ตรวจสอบตั้งค่าฐานข้อมูลในไฟล์ `.env` (สลับ username/password ให้ตรงกับเครื่องคุณ)
-2. รันคำสั่ง `go run cmd/api/main.go`
-3. ลองยิง API ผ่าน Postman ได้เลย!
+1. สั่งรัน Database ขึ้นมาก่อนด้วย `docker compose up -d`
+2. ตรวจสอบตั้งค่าฐานข้อมูลในไฟล์ `.env` (สลับ username/password ให้ตรงกับเครื่องคุณ ถ้าไม่ได้ใช้ค่า default ของ Docker)
+3. รันคำสั่ง `go run cmd/api/main.go`
+4. ลองยิง API ผ่าน Postman ได้เลย!
 
 *(เข้าไปอ่าน `README.md` ย่อยตามแต่ละโฟลเดอร์เพื่อทำความเข้าใจอินเทอร์นัลแต่ละส่วนได้เลย!)*
