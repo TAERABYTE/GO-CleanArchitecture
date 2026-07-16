@@ -79,7 +79,7 @@ func seedAdmin(ctx context.Context, db *pgxpool.Pool) error {
 	}
 
 	if count == 0 {
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte("golang123"), bcrypt.DefaultCost)
 		if err != nil {
 			return err
 		}
@@ -88,7 +88,7 @@ func seedAdmin(ctx context.Context, db *pgxpool.Pool) error {
 		if err != nil {
 			return err
 		}
-		log.Println("Seeded default admin user (admin/admin123)")
+		log.Println("🌱 Seeded default admin user  [ admin : golang123 ]")
 	}
 
 	return nil

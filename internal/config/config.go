@@ -26,7 +26,7 @@ func Load() *Config {
 	}
 
 	if cfg.PORT == "" {
-		cfg.PORT = "8080"
+		cfg.PORT = "5000"
 	}
 
 	if cfg.DB_DSN == "" {
