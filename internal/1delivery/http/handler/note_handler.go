@@ -5,10 +5,18 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"go-minimal-backend/internal/1delivery/http/middleware"
 	"go-minimal-backend/internal/4domain"
 	"go-minimal-backend/pkg/response"
+)
+
+// จำกัดความยาวให้ตรงกับ constraint ของ DB (notes.title เป็น VARCHAR(255))
+// ส่วน content เป็น TEXT ไม่มี limit ระดับ DB แต่กันไว้ระดับ API เพื่อไม่ให้ client ส่ง payload ใหญ่เกินจำเป็น
+const (
+	noteTitleMaxLen   = 255
+	noteContentMaxLen = 10_000
 )
 
 // NoteHandler คือชั้นบนสุดของสถาปัตยกรรม (delivery layer) หน้าที่คือ
@@ -31,6 +39,30 @@ type createNoteRequest struct {
 	Content string `json:"content"`
 }
 
+// Validate เช็คกฎของ field ระดับ "รูปแบบ request" (ไม่ใช่ business rule ซึ่งควรอยู่ชั้น usecase)
+// trim ค่า Title/Content ให้เลยในตัว (mutate ผ่าน pointer receiver) เพื่อไม่ให้เก็บ
+// ช่องว่างหัว-ท้ายที่ไม่มีความหมายลง DB แล้วคืน map ของ field -> ข้อความ error (ว่างแปลว่าผ่านหมด)
+//
+// ใช้เป็นแนวทางสำหรับ request struct ของ resource อื่นในอนาคต: เพิ่มเมธอด Validate()
+// ให้ DTO ของตัวเอง แล้วเรียกใน handler ก่อนส่งต่อไปชั้น usecase
+func (req *createNoteRequest) Validate() map[string]string {
+	errs := map[string]string{}
+
+	req.Title = strings.TrimSpace(req.Title)
+	if req.Title == "" {
+		errs["title"] = "title is required"
+	} else if len(req.Title) > noteTitleMaxLen {
+		errs["title"] = "title must be at most 255 characters"
+	}
+
+	req.Content = strings.TrimSpace(req.Content)
+	if len(req.Content) > noteContentMaxLen {
+		errs["content"] = "content must be at most 10,000 characters"
+	}
+
+	return errs
+}
+
 // Create = handler ของ endpoint "สร้างโน้ตใหม่" (เช่น POST /notes)
 // w = ตัวเขียน response กลับไปหา client, r = ข้อมูล request ที่เข้ามา
 func (h *NoteHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -48,6 +80,12 @@ func (h *NoteHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		// body ไม่ใช่ JSON ที่ถูกต้อง หรือ field ผิด type ตอบ 400 Bad Request
 		response.Error(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	// เช็ค required/ความยาว ก่อนส่งต่อไปชั้น usecase (ดู Validate() ด้านบน)
+	if errs := req.Validate(); len(errs) > 0 {
+		response.ValidationErrors(w, errs)
 		return
 	}
 
@@ -151,6 +189,11 @@ func (h *NoteHandler) Update(w http.ResponseWriter, r *http.Request) {
 	var req createNoteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.Error(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	if errs := req.Validate(); len(errs) > 0 {
+		response.ValidationErrors(w, errs)
 		return
 	}
 
