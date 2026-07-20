@@ -1,7 +1,6 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: go-minimal-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
@@ -16,6 +15,25 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    # PORT/JWT_SECRET/CORS_ALLOWED_ORIGINS ดึงมาจาก .env เหมือนตอนรันตรงๆ บนเครื่อง
+    env_file:
+      - .env
+    environment:
+      # ต้องชี้ไปที่ "db" (ชื่อ service ข้างบน) ไม่ใช่ localhost เพราะจากมุมมองของ container
+      # api นี้ localhost คือตัวมันเอง ไม่ใช่ container db คนละใบกัน — Docker network สร้าง DNS
+      # ชื่อ service ให้เองอัตโนมัติ เลยเรียกผ่านชื่อ "db" ได้ตรงๆ
+      DB_DSN: postgres://postgres:password@db:5432/go_minimal_db?sslmode=disable
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   db_data:
