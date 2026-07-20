@@ -50,4 +50,25 @@ go test ./... -v
 3. รันคำสั่ง `go run cmd/api/main.go`
 4. ลองยิง API ผ่าน Postman ได้เลย!
 
-*(เข้าไปอ่าน `README.md` ย่อยตามแต่ละโฟลเดอร์เพื่อทำความเข้าใจอินเทอร์นัลแต่ละส่วนได้เลย!)*
+
+## ✅ เช็คลิสต์ระบบที่มีในเทมเพลตนี้
+
+### ทำแล้ว
+- ✅ Clean Architecture 4 ชั้น (`domain` / `usecase` / `repository` / `delivery`)
+- ✅ JWT Authentication + RBAC (`admin` / `user`) — `internal/1delivery/http/middleware/auth.go`
+- ✅ CORS middleware ตั้งค่า origin ที่อนุญาตผ่าน `.env` (`CORS_ALLOWED_ORIGINS`) — `middleware/cors.go`
+- ✅ Input validation ระดับ field (required/ความยาว) ทำไว้เป็นแนวทางที่ `notes` — `handler/note_handler.go` (`Validate()`)
+- ✅ Error response กลาง พร้อม `request_id` ทุก error ไม่หลุด error message ดิบไปหา client — `pkg/response/json.go`
+- ✅ Request ID middleware — ผูก ID เดียวกันไว้ทั้ง response และ server log ไล่ debug ได้ — `middleware/requestid.go`
+- ✅ Panic recovery middleware — handler panic แล้วยังตอบ client เป็น 500 ปกติ ไม่ใช่ connection reset — `middleware/recover.go`
+- ✅ `http.Server` timeout (`ReadHeaderTimeout`/`ReadTimeout`/`WriteTimeout`/`IdleTimeout`) กัน slow client ค้าง connection — `cmd/api/main.go`
+- ✅ Graceful shutdown (ดัก `SIGINT`/`SIGTERM` แล้วรอ request ค้างจบก่อนปิด) — `cmd/api/main.go`
+- ✅ Rate limiting ต่อ IP ที่ `/api/auth/login` และ `/api/auth/register` กัน brute-force — `middleware/ratelimit.go`
+- ✅ Auto-create ตาราง + seed admin user ตอน boot — `internal/3repository/postgres/db.go`
+
+### ยังไม่มี (รู้ไว้ก่อนเอาไปใช้งานจริง/production)
+- [ ] Migration tool จริงแบบ versioning/rollback (ตอนนี้เป็นแค่ `CREATE TABLE IF NOT EXISTS` แก้ schema ตารางเดิมต้องเขียน SQL เอง)
+- [ ] Pagination บน list endpoint (ตอนนี้ `GET /api/notes` ดึงมาหมดทุก row ของ user)
+- [ ] Access log middleware (log ทุก request อัตโนมัติ ไม่ใช่แค่ตอน error)
+- [ ] Automated tests (unit/integration) — ยังไม่มีไฟล์ `_test.go` เลย
+- [ ] Health check endpoint (เช่น `/healthz`) — จำเป็นถ้า deploy หลัง load balancer/k8s
