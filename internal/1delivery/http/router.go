@@ -32,9 +32,12 @@ func NewRouter(authHandler *handler.AuthHandler, noteHandler *handler.NoteHandle
 
 	// CORS ต้องห่อ mux ทั้งตัวเป็นชั้นนอกสุด เพื่อดัก preflight (OPTIONS) ของทุก route
 	// ก่อนที่จะไปถึง mux (ซึ่งไม่มี route ของ OPTIONS ผูกไว้ จะตอบ 404 ถ้าไม่ดักไว้ก่อน)
-	handler := middleware.CORS(corsAllowedOrigins)(mux)
+	wrapped := middleware.CORS(corsAllowedOrigins)(mux)
 
-	// RequestID ต้องเป็นชั้นนอกสุดจริงๆ (ห่อรอบ CORS อีกที) เพื่อให้ทุก request ที่เข้ามา
-	// (รวมถึง preflight OPTIONS) มี request ID ผูกไว้ตั้งแต่ต้นทาง ก่อนจะไหลผ่าน layer อื่น
-	return middleware.RequestID(handler)
+	// Recover ต้องอยู่นอก CORS แต่ใน RequestID (ดูคอมเมนต์ใน recover.go ว่าทำไมต้องเรียงแบบนี้)
+	wrapped = middleware.Recover(wrapped)
+
+	// RequestID ต้องเป็นชั้นนอกสุดจริงๆ เพื่อให้ทุก request ที่เข้ามา (รวมถึง preflight OPTIONS
+	// และตอน panic) มี request ID ผูกไว้ตั้งแต่ต้นทาง ก่อนจะไหลผ่าน layer อื่นทั้งหมด
+	return middleware.RequestID(wrapped)
 }
