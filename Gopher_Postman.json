@@ -1,0 +1,164 @@
+{
+  "info": {
+    "name": "Gopher - Go Minimal Backend",
+    "description": "รวม endpoint ทั้งหมดของ Go Minimal Backend template ไว้ทดสอบผ่าน Postman ได้ทันที\n\nวิธีใช้:\n1. Import ไฟล์นี้เข้า Postman (Import > เลือกไฟล์นี้)\n2. เช็คว่า server รันอยู่แล้ว (`go run cmd/api/main.go` หรือ `docker compose up -d --build`)\n3. ยิง Auth > Login (Admin) หรือ Login (New User) ก่อน — token จะถูกเก็บลง collection variable `token` ให้อัตโนมัติผ่าน test script ข้างใน\n4. ยิง request อื่นๆ ต่อได้เลย มันจะแนบ `Authorization: Bearer {{token}}` ให้เองทุกครั้ง",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:5000" },
+    { "key": "token", "value": "" },
+    { "key": "note_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register (New User)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"test1234\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/auth/register", "host": ["{{base_url}}"], "path": ["api", "auth", "register"] },
+            "description": "สมัคร user ใหม่ (ได้ role \"user\" เสมอ) — 201 = สำเร็จ, 409 = username ซ้ำ"
+          }
+        },
+        {
+          "name": "Login (New User)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('token', body.token);",
+                  "    console.log('token saved:', body.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"test1234\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/auth/login", "host": ["{{base_url}}"], "path": ["api", "auth", "login"] },
+            "description": "Login ด้วย user ธรรมดา (ต้อง Register ก่อน) — ได้ role \"user\" ทำได้ทุกอย่างยกเว้น Delete note"
+          }
+        },
+        {
+          "name": "Login (Admin - seeded)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('token', body.token);",
+                  "    console.log('admin token saved:', body.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"golang123\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/auth/login", "host": ["{{base_url}}"], "path": ["api", "auth", "login"] },
+            "description": "Login ด้วย admin ที่ระบบ seed ให้อัตโนมัติตอน boot ครั้งแรก (username: admin, password: golang123) — role \"admin\" เท่านั้นที่ Delete note ได้"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notes",
+      "item": [
+        {
+          "name": "List Notes",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/notes", "host": ["{{base_url}}"], "path": ["api", "notes"] },
+            "description": "ดึงโน้ตทั้งหมดของ user ที่ login อยู่ (ต้องมี token)"
+          }
+        },
+        {
+          "name": "Create Note",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('note_id', body.id);",
+                  "    console.log('note_id saved:', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"My first note\",\n  \"content\": \"Hello world\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/notes", "host": ["{{base_url}}"], "path": ["api", "notes"] },
+            "description": "สร้างโน้ตใหม่ — id ที่ได้จะถูกเก็บลง note_id ให้อัตโนมัติ เอาไปใช้กับ Get/Update/Delete ต่อได้เลย\n\nลองส่ง title ว่างดูจะได้ 400 พร้อม error รายฟิลด์ (validation)"
+          }
+        },
+        {
+          "name": "Get Note By ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/notes/{{note_id}}", "host": ["{{base_url}}"], "path": ["api", "notes", "{{note_id}}"] },
+            "description": "ดึงโน้ต 1 อันด้วย id (ใช้ note_id ที่ได้จาก Create Note) — ดึงโน้ตของ user คนอื่นจะได้ 404 เสมอ"
+          }
+        },
+        {
+          "name": "Update Note",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated title\",\n  \"content\": \"Updated content\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/notes/{{note_id}}", "host": ["{{base_url}}"], "path": ["api", "notes", "{{note_id}}"] },
+            "description": "แก้ไขโน้ต (ต้องเป็นเจ้าของเท่านั้น)"
+          }
+        },
+        {
+          "name": "Delete Note (Admin only)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/notes/{{note_id}}", "host": ["{{base_url}}"], "path": ["api", "notes", "{{note_id}}"] },
+            "description": "ลบโน้ต — ต้อง login ด้วย admin เท่านั้น (ยิงด้วย token ของ user ธรรมดาจะได้ 403 Forbidden)"
+          }
+        }
+      ]
+    }
+  ]
+}
